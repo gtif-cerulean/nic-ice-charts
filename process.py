@@ -227,8 +227,8 @@ def main():
     tmp_root = OUTPUT_DIR / "_tmp_usnic"
     tmp_root.mkdir(parents=True, exist_ok=True)
 
-    new_records = []  # per-item features (original PARQUET_PATH content)
-    grouped_items = defaultdict(list)  # date -> list of {"url":..., "geometry":...}
+    new_records = []
+    grouped_items = defaultdict(list)
 
     # Load existing (to preserve schema & allow incremental runs)
     existing_items = load_existing_parquet(Path(PARQUET_PATH))
@@ -237,6 +237,9 @@ def main():
     )
 
     for d in date_iter(START_DATE, END_DATE):
+        if d >= datetime.today():
+            print(f"🛑 Reached current date ({d}), stopping.")
+            break
         item_id = f"USNIC_{d.strftime('%Y%m%d')}"
         if item_id in existing_item_ids:
             continue
