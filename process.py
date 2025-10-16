@@ -10,10 +10,7 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import box
 
-# --------------------
-# Config (via env)
-# --------------------
-GCS_BUCKET = "unused-now"  # kept for compatibility with original config
+# Config
 
 PARQUET_PATH = os.getenv("PARQUET_PATH", "geojson_assets.parquet")
 GROUPED_PARQUET_PATH = os.getenv("GROUPED_PARQUET_PATH", "daily_items.parquet")
@@ -30,24 +27,21 @@ STYLE_URL = os.getenv(
     "https://raw.githubusercontent.com/gtif-cerulean/assets/refs/heads/main/styles/dmi-ice-charts.json",
 )
 
-# USNIC prd prefix (e.g., "30")
+# USNIC prd prefix (e.g., "30") - 30 is antarctica
 USNIC_PREFIX = os.getenv("USNIC_PREFIX", "30")
 
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-# Try to import a robust make_valid; provide safe fallback
 try:
     from shapely.validation import make_valid as _make_valid
 except Exception:
     try:
-        from shapely import make_valid as _make_valid  # shapely>=2 may expose here
+        from shapely import make_valid as _make_valid
     except Exception:
         _make_valid = None
 
 
-# --------------------
 # Helpers
-# --------------------
 def date_iter(d0, d1):
     d = d0
     while d <= d1:
@@ -81,7 +75,6 @@ def extract_first_shp(zip_bytes: bytes, target_dir: Path) -> Path:
 def load_existing_parquet(path: Path) -> gpd.GeoDataFrame:
     if path.exists():
         return gpd.read_parquet(path)
-    # Match original schema (type/stac/id/datetime/geometry/bbox/assets/links)
     cols = [
         "type",
         "stac_version",
@@ -118,7 +111,6 @@ def add_style_link(row):
 def to_ll_repair(gdf_src: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """Reproject to EPSG:4326 and repair geometries."""
     if gdf_src.crs is None:
-        # Your sample WKT is a South Pole stereographic; EPSG:3031 is a sensible default.
         gdf_src = gdf_src.set_crs(3031, allow_override=True)
     gdf = gdf_src.to_crs(4326)
     if _make_valid:
@@ -142,11 +134,6 @@ def env_box_bounds(gdf_ll: gpd.GeoDataFrame):
 
 
 def create_stac_item(date, id_, assets, asset_type):
-    """
-    EXACT same shape as your original create_stac_item() output:
-    - type, stac_version, id, datetime, geometry, bbox, assets, links
-    When assets == [], we return an 'invalid' feature (but we will NOT write those to parquet).
-    """
     if not assets:
         return {
             "type": "Feature",
@@ -163,7 +150,6 @@ def create_stac_item(date, id_, assets, asset_type):
             },
         }
 
-    # assets[i]["geometry"] are boxes already; get an overall envelope via bounds (safe & fast)
     bxs = [a["geometry"].bounds for a in assets]
     minx = min(b[0] for b in bxs)
     miny = min(b[1] for b in bxs)
@@ -187,12 +173,6 @@ def create_stac_item(date, id_, assets, asset_type):
 
 
 def merge_items_per_day(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
-    """
-    Keep the SAME output structure as your original merge, but robust:
-    - geometry is a bbox from total_bounds (no unary_union)
-    - assets are re-keyed {'asset_0': {...}, ...}
-    - links are concatenated
-    """
     merged = []
     # Exclude invalids if present
     if "properties" in df.columns:
@@ -239,9 +219,7 @@ def merge_items_per_day(df: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     return gpd.GeoDataFrame(merged, geometry="geometry", crs="EPSG:4326")
 
 
-# --------------------
 # Main
-# --------------------
 def main():
     print(
         f"Fetching USNIC shapefiles from {START_DATE} to {END_DATE} (prefix={USNIC_PREFIX})"
@@ -355,7 +333,6 @@ def main():
     else:
         merged = grouped_existing
 
-    # Merge per day (same output structure as original), add style links, save
     if not merged.empty:
         final = merge_items_per_day(merged)
         final["links"] = final.apply(add_style_link, axis=1)
