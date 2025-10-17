@@ -4,6 +4,7 @@ import zipfile
 import shutil
 from pathlib import Path
 from datetime import datetime, timedelta
+from datetime import date as date_cls
 from collections import defaultdict
 
 import geopandas as gpd
@@ -237,7 +238,7 @@ def main():
     )
 
     for d in date_iter(START_DATE, END_DATE):
-        if d >= datetime.today():
+        if d >= date_cls.today():
             print(f"🛑 Reached current date ({d}), stopping.")
             break
         item_id = f"USNIC_{d.strftime('%Y%m%d')}"
