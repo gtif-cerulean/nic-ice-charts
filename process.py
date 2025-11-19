@@ -269,6 +269,17 @@ def main():
             out_geojson = OUTPUT_DIR / f"{item_id}.geojson"
             gdf_ll.to_file(out_geojson, driver="GeoJSON")
 
+            # manually override the projection from urn:ogc:def:crs:OGC:1.3:CRS84 to "EPSG:4326"
+            with open(out_geojson, "r", encoding="utf-8") as gjs_f:
+                geojson_file_content = gjs_f.read()
+
+            geojson_file_content = geojson_file_content.replace(
+                "urn:ogc:def:crs:OGC:1.3:CRS84", "EPSG:4326", 1
+            )
+            # write over original
+            with open(out_geojson, "w", encoding="utf-8") as f:
+                f.write(geojson_file_content)
+
             # Envelope box per item
             geom_box, bbox_list = env_box_bounds(gdf_ll)
 
