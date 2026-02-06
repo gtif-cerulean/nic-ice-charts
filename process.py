@@ -25,7 +25,7 @@ ASSET_BASE_URL_GEOJSON = os.getenv(
 )
 STYLE_URL = os.getenv(
     "STYLE_URL",
-    "https://raw.githubusercontent.com/gtif-cerulean/assets/refs/heads/main/styles/dmi-ice-charts.json",
+    "https://raw.githubusercontent.com/gtif-cerulean/assets/refs/heads/main/styles/nic_arctic_ice_charts_style.json",
 )
 
 # USNIC prd prefix (e.g., "30") - 30 is antarctica
